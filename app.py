@@ -28,23 +28,25 @@ model_choice = st.sidebar.selectbox(
 def multiselect_with_select_all(label, options):
     options_with_all = ["Select All"] + list(options)
     selected = st.sidebar.multiselect(label, options_with_all, default=["Select All"])
-    if "Select All" in selected:
-        return options  # all values
+    if "Select All" in selected or not selected:
+        return list(options)  # return all categories
     return selected
 
+# Apply filters
 internet_filter = multiselect_with_select_all("Filter by Internet Service:", df['InternetService'].unique())
 payment_filter = multiselect_with_select_all("Filter by Payment Method:", df['PaymentMethod'].unique())
 phone_filter = multiselect_with_select_all("Filter by Phone Service:", df['PhoneService'].unique())
 
-# Top N churners slider
-top_n = st.sidebar.slider("Top N Churners", min_value=5, max_value=50, value=20, step=1)
-
-# Apply filters
 df_filtered = df[
-    (df['InternetService'].isin(internet_filter)) &
-    (df['PaymentMethod'].isin(payment_filter)) &
-    (df['PhoneService'].isin(phone_filter))
+    df['InternetService'].isin(internet_filter) &
+    df['PaymentMethod'].isin(payment_filter) &
+    df['PhoneService'].isin(phone_filter)
 ]
+
+# Top N slider
+top_n = st.sidebar.slider("Top N Churners", min_value=5, max_value=50, value=20)
+top_churners = df_filtered[df_filtered[pred_col] == 1].sort_values(prob_col, ascending=False).head(top_n)
+
 
 # --- Map selected model to prediction columns ---
 if model_choice == "Logistic Regression":
