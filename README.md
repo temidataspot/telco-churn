@@ -64,36 +64,3 @@ This project leverages machine learning and interactive data visualisation to:
 
 [Dashboard App Code](https://github.com/temidataspot/telco-churn/blob/main/app.py)
 
-
-
-
-## Browse by Categories
-
-<div style="display: flex; gap: 10px; flex-wrap: wrap;">
-
-<a href="https://example.com/health" style="text-decoration: none;">
-  <div style="background-color: #d1f7d6; padding: 20px; border-radius: 10px; text-align: center; width: 120px; color: black; font-weight: bold;">
-    Health
-  </div>
-</a>
-
-<a href="https://example.com/finance" style="text-decoration: none;">
-  <div style="background-color: #f7f1d1; padding: 20px; border-radius: 10px; text-align: center; width: 120px; color: black; font-weight: bold;">
-    Finance
-  </div>
-</a>
-
-<a href="https://example.com/media" style="text-decoration: none;">
-  <div style="background-color: #d1e7f7; padding: 20px; border-radius: 10px; text-align: center; width: 120px; color: black; font-weight: bold;">
-    Media
-  </div>
-</a>
-
-<a href="https://example.com/agric" style="text-decoration: none;">
-  <div style="background-color: #f7d1d1; padding: 20px; border-radius: 10px; text-align: center; width: 120px; color: black; font-weight: bold;">
-    Agric
-  </div>
-</a>
-
-</div>
-
