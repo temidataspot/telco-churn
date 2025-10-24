@@ -1,50 +1,77 @@
+# app.py
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-# Load CSV
-df = pd.read_csv("churn_model_comparison.csv")
-
-st.title("Customer Churn Prediction Dashboard")
-st.write("Compare Logistic Regression, SMOTE Logistic, and XGBoost predictions")
-
-model_choice = st.sidebar.selectbox(
-    "Select Model View",
-    ("Logistic", "SMOTE Logistic", "XGBoost")
+# --- Page Config ---
+st.set_page_config(
+    page_title="Telco Churn Dashboard",
+    layout="wide"
 )
 
-pred_col = f"{model_choice}_Pred"
-proba_col = f"{model_choice}_Prob"
+st.title("Telco Customer Churn Dashboard")
+st.markdown("Compare predictions from different models and explore top churners.")
 
-top_churners = df[df[pred_col] == 1].sort_values(by=proba_col, ascending=False)
+# --- Load Data ---
+@st.cache_data
+def load_data():
+    df = pd.read_csv("churn_model_comparison.csv")
+    return df
 
-# Metrics
-y_true = df['Actual']
-y_pred = df[pred_col]
-y_prob = df[proba_col]
+df = load_data()
 
-accuracy = accuracy_score(y_true, y_pred)
-precision = precision_score(y_true, y_pred)
-recall = recall_score(y_true, y_pred)
-roc_auc = roc_auc_score(y_true, y_prob)
+# --- Sidebar: Model Selector ---
+model_choice = st.sidebar.selectbox(
+    "Select Model View:",
+    ["Logistic Regression", "SMOTE Logistic", "XGBoost"]
+)
 
-st.subheader(f"Model Metrics: {model_choice}")
-st.write(f"**Accuracy:** {accuracy:.2f}")
-st.write(f"**Precision:** {precision:.2f}")
-st.write(f"**Recall:** {recall:.2f}")
-st.write(f"**ROC-AUC:** {roc_auc:.2f}")
+# Map choice to column names
+model_pred_col = {
+    "Logistic Regression": ("Logistic_Pred", "Logistic_Prob"),
+    "SMOTE Logistic": ("Smote_Pred", "Smote_Prob"),
+    "XGBoost": ("XGB_Pred", "XGB_Prob")
+}
 
-# Table of top churners
-st.subheader(f"Top Churners Predicted by {model_choice}")
-st.dataframe(top_churners[['customerID', 'gender', 'tenure', 'MonthlyCharges', 'TotalCharges', pred_col, proba_col]])
+pred_col, prob_col = model_pred_col[model_choice]
 
-# Bar chart: Monthly Charges of top churners
-fig1 = px.bar(top_churners.head(20), x='customerID', y='MonthlyCharges', color='MonthlyCharges',
-              title=f"Monthly Charges of Top 20 Predicted Churners ({model_choice})")
-st.plotly_chart(fig1, use_container_width=True)
+# --- Metrics ---
+accuracy = df[df[pred_col].notna()].apply(
+    lambda row: 1 if row['Actual'] == row[pred_col] else 0, axis=1
+).mean()
 
-# Bar chart: Total Charges of top churners
-fig2 = px.bar(top_churners.head(20), x='customerID', y='TotalCharges', color='TotalCharges',
-              title=f"Total Charges of Top 20 Predicted Churners ({model_choice})")
-st.plotly_chart(fig2, use_container_width=True)
+recall = df[df[pred_col]==1]['Actual'].sum() / df['Actual'].sum()
+roc_auc = df[[pred_col, 'Actual']].corr().iloc[0,1]  # rough proxy
+
+st.subheader(f"Model Metrics for {model_choice}")
+st.metric("Accuracy", f"{accuracy:.2f}")
+st.metric("Recall (Churn)", f"{recall:.2f}")
+st.metric("ROC-AUC (Approx.)", f"{roc_auc:.2f}")
+
+# --- Filter top churners ---
+top_n = st.sidebar.slider("Select number of top churners to view", 5, 50, 10)
+top_churners = df.sort_values(prob_col, ascending=False).head(top_n)
+
+st.subheader(f"Top {top_n} Predicted Churners ({model_choice})")
+st.dataframe(top_churners[['customerID', 'gender', 'tenure', 'MonthlyCharges', 'TotalCharges', 'Actual', pred_col, prob_col]])
+
+# --- Visuals ---
+st.subheader("Visual Analysis")
+col1, col2 = st.columns(2)
+
+with col1:
+    st.markdown("### Churn Probability Distribution")
+    sns.histplot(df[prob_col], bins=20, kde=True)
+    st.pyplot(plt.gcf())
+    plt.clf()
+
+with col2:
+    st.markdown("### Total Charges of Top Churners")
+    sns.barplot(x='customerID', y='TotalCharges', data=top_churners)
+    plt.xticks(rotation=45)
+    st.pyplot(plt.gcf())
+    plt.clf()
+
+st.markdown("---")
+st.write("Use the sidebar to select different model views and number of top churners.")
