@@ -36,6 +36,9 @@ internet_filter = multiselect_with_select_all("Filter by Internet Service:", df[
 payment_filter = multiselect_with_select_all("Filter by Payment Method:", df['PaymentMethod'].unique())
 phone_filter = multiselect_with_select_all("Filter by Phone Service:", df['PhoneService'].unique())
 
+# Top N churners slider
+top_n = st.sidebar.slider("Top N Churners", min_value=5, max_value=50, value=20, step=1)
+
 # Apply filters
 df_filtered = df[
     (df['InternetService'].isin(internet_filter)) &
@@ -62,7 +65,7 @@ accuracy = (df_filtered['Actual'] == df_filtered[pred_col]).mean()
 recall = recall_score(df_filtered['Actual'], df_filtered[pred_col])
 roc_auc = roc_auc_score(df_filtered['Actual'], df_filtered[prob_col])
 
-# Display metrics in 3 columns
+# Display metrics in 3 columns (card-like)
 col1, col2, col3 = st.columns(3)
 col1.metric("Accuracy", f"{accuracy:.2f}")
 col2.metric("Recall (Churn)", f"{recall:.2f}")
@@ -70,17 +73,17 @@ col3.metric("ROC-AUC", f"{roc_auc:.2f}")
 
 st.write("---")
 
-# --- Visuals ---
-top_churners = df_filtered[df_filtered[pred_col] == 1].sort_values(prob_col, ascending=False).head(20)
+# --- Top Churners ---
+top_churners = df_filtered[df_filtered[pred_col] == 1].sort_values(prob_col, ascending=False).head(top_n)
 
 # Total charges by top churners
 chart1 = alt.Chart(top_churners).mark_bar(color="#FF6F61").encode(
     x=alt.X("customerID:N", title="Customer ID"),
     y=alt.Y("TotalCharges:Q", title="Total Charges"),
-    tooltip=["customerID", "TotalCharges"]
+    tooltip=["customerID", "TotalCharges", prob_col]
 ).properties(title="Total Charges by Top Churners")
 
-# Percentage of top churners with phone service
+# Percentage of top churners with phone service (donut chart)
 phone_counts = top_churners['PhoneService'].value_counts(normalize=True).reset_index()
 phone_counts.columns = ['PhoneService', 'Percentage']
 chart2 = alt.Chart(phone_counts).mark_arc(innerRadius=50).encode(
@@ -119,7 +122,7 @@ col4.altair_chart(chart4, use_container_width=True)
 st.write("---")
 
 # --- Tables ---
-st.subheader("Top Churners Details")
+st.subheader(f"Top {top_n} Churners Details")
 st.dataframe(top_churners)
 
 st.subheader("Filtered Data Preview")
