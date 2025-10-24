@@ -1,56 +1,40 @@
-# app.py
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-# --- Page Config ---
-st.set_page_config(
-    page_title="Telco Churn Dashboard",
-    layout="wide"
-)
-
-# --- Centered Title & Subtitle ---
-st.markdown("<h1 style='text-align: center; color: white;'>Telco Customer Churn Dashboard</h1>", unsafe_allow_html=True)
-st.markdown("<h5 style='text-align: center; color: gray;'>Compare predictions from different models and explore top churners.</h4>", unsafe_allow_html=True)
+import numpy as np
+import altair as alt
+from sklearn.metrics import recall_score, roc_auc_score
 
 # --- Load Data ---
-@st.cache_data
-def load_data():
-    df = pd.read_csv("churn_model_comparison.csv")
-    return df
+df = pd.read_csv("churn_model_comparison.csv")
 
-df = load_data()
+# --- Page Setup ---
+st.set_page_config(page_title="Telco Customer Churn Dashboard", layout="wide")
+
+# --- Title and Subtitle ---
+st.markdown("<h1 style='text-align: center;'>Telco Customer Churn Dashboard</h1>", unsafe_allow_html=True)
+st.markdown("<h4 style='text-align: center;'>Compare predictions from different models and explore top churners</h4>", unsafe_allow_html=True)
+st.write("---")
 
 # --- Sidebar Filters ---
 st.sidebar.header("Filters")
 
+# Model selection
 model_choice = st.sidebar.selectbox(
     "Select Model View:",
     ["Logistic Regression", "SMOTE Logistic", "XGBoost"]
 )
 
-# Function to create multiselect with explicit "Select All"
+# Multi-select with explicit "Select All"
 def multiselect_with_select_all(label, options):
     options_with_all = ["Select All"] + list(options)
     selected = st.sidebar.multiselect(label, options_with_all, default=["Select All"])
-    
     if "Select All" in selected:
-        return options  # return all actual values
-    else:
-        return selected
+        return options  # all values
+    return selected
 
-internet_filter = multiselect_with_select_all(
-    "Filter by Internet Service:", df['InternetService'].unique()
-)
-
-payment_filter = multiselect_with_select_all(
-    "Filter by Payment Method:", df['PaymentMethod'].unique()
-)
-
-phone_filter = multiselect_with_select_all(
-    "Filter by Phone Service:", df['PhoneService'].unique()
-)
+internet_filter = multiselect_with_select_all("Filter by Internet Service:", df['InternetService'].unique())
+payment_filter = multiselect_with_select_all("Filter by Payment Method:", df['PaymentMethod'].unique())
+phone_filter = multiselect_with_select_all("Filter by Phone Service:", df['PhoneService'].unique())
 
 # Apply filters
 df_filtered = df[
@@ -59,54 +43,85 @@ df_filtered = df[
     (df['PhoneService'].isin(phone_filter))
 ]
 
+# --- Map selected model to prediction columns ---
+if model_choice == "Logistic Regression":
+    pred_col = "Logistic_Pred"
+    prob_col = "Logistic_Prob"
+elif model_choice == "SMOTE Logistic":
+    pred_col = "Smote_Pred"
+    prob_col = "Smote_Prob"
+elif model_choice == "XGBoost":
+    pred_col = "XGB_Pred"
+    prob_col = "XGB_Prob"
+else:
+    st.error("Invalid model selected")
+    st.stop()
 
 # --- Metrics ---
 accuracy = (df_filtered['Actual'] == df_filtered[pred_col]).mean()
-recall = df_filtered[df_filtered[pred_col]==1]['Actual'].sum() / df_filtered['Actual'].sum()
-roc_auc = df_filtered[[pred_col,'Actual']].corr().iloc[0,1]
+recall = recall_score(df_filtered['Actual'], df_filtered[pred_col])
+roc_auc = roc_auc_score(df_filtered['Actual'], df_filtered[prob_col])
 
-st.markdown("### Model Metrics")
+# Display metrics in 3 columns
 col1, col2, col3 = st.columns(3)
 col1.metric("Accuracy", f"{accuracy:.2f}")
 col2.metric("Recall (Churn)", f"{recall:.2f}")
-col3.metric("ROC-AUC (Approx.)", f"{roc_auc:.2f}")
+col3.metric("ROC-AUC", f"{roc_auc:.2f}")
 
-# --- Top Churners ---
-top_n = st.sidebar.slider("Select number of top churners to view", 5, 50, 10)
-top_churners = df_filtered.sort_values(prob_col, ascending=False).head(top_n)
+st.write("---")
 
 # --- Visuals ---
-st.markdown("### Visual Analysis")
-vis_col1, vis_col2 = st.columns(2)
+top_churners = df_filtered[df_filtered[pred_col] == 1].sort_values(prob_col, ascending=False).head(20)
 
-with vis_col1:
-    st.markdown("**Total Charges of Top Churners**")
-    sns.barplot(x='customerID', y='TotalCharges', data=top_churners)
-    plt.xticks(rotation=45)
-    st.pyplot(plt.gcf())
-    plt.clf()
+# Total charges by top churners
+chart1 = alt.Chart(top_churners).mark_bar(color="#FF6F61").encode(
+    x=alt.X("customerID:N", title="Customer ID"),
+    y=alt.Y("TotalCharges:Q", title="Total Charges"),
+    tooltip=["customerID", "TotalCharges"]
+).properties(title="Total Charges by Top Churners")
 
-with vis_col2:
-    st.markdown("**Top Churners with Phone Service**")
-    phone_counts = top_churners['PhoneService'].value_counts()
-    plt.pie(phone_counts, labels=phone_counts.index, autopct='%1.1f%%', colors=['#4B0082','#9370DB'])
-    st.pyplot(plt.gcf())
-    plt.clf()
+# Percentage of top churners with phone service
+phone_counts = top_churners['PhoneService'].value_counts(normalize=True).reset_index()
+phone_counts.columns = ['PhoneService', 'Percentage']
+chart2 = alt.Chart(phone_counts).mark_arc(innerRadius=50).encode(
+    theta=alt.Theta("Percentage:Q"),
+    color=alt.Color("PhoneService:N"),
+    tooltip=["PhoneService", alt.Tooltip("Percentage:Q", format=".0%")]
+).properties(title="Top Churners by Phone Service")
 
-vis_col3, vis_col4 = st.columns(2)
+# Top churners by payment method
+payment_counts = top_churners['PaymentMethod'].value_counts().reset_index()
+payment_counts.columns = ['PaymentMethod', 'Count']
+chart3 = alt.Chart(payment_counts).mark_bar(color="#6A5ACD").encode(
+    x=alt.X("PaymentMethod:N", title="Payment Method"),
+    y=alt.Y("Count:Q", title="Number of Top Churners"),
+    tooltip=["PaymentMethod", "Count"]
+).properties(title="Top Churners by Payment Method")
 
-with vis_col3:
-    st.markdown("**Top Churners by Payment Method**")
-    sns.countplot(y='PaymentMethod', data=top_churners, palette='cool')
-    st.pyplot(plt.gcf())
-    plt.clf()
+# Top churners by internet service
+internet_counts = top_churners['InternetService'].value_counts().reset_index()
+internet_counts.columns = ['InternetService', 'Count']
+chart4 = alt.Chart(internet_counts).mark_bar(color="#20B2AA").encode(
+    x=alt.X("InternetService:N", title="Internet Service"),
+    y=alt.Y("Count:Q", title="Number of Top Churners"),
+    tooltip=["InternetService", "Count"]
+).properties(title="Top Churners by Internet Service")
 
-with vis_col4:
-    st.markdown("**Top Churners by Internet Service**")
-    sns.countplot(y='InternetService', data=top_churners, palette='magma')
-    st.pyplot(plt.gcf())
-    plt.clf()
+# Display charts 2x2
+col1, col2 = st.columns(2)
+col1.altair_chart(chart1, use_container_width=True)
+col2.altair_chart(chart2, use_container_width=True)
 
-# --- Table ---
-st.markdown("### Top Churners Table")
-st.dataframe(top_churners[['customerID', 'gender', 'SeniorCitizen', 'tenure', 'MonthlyCharges', 'TotalCharges', 'Actual', pred_col, prob_col, 'InternetService', 'PaymentMethod', 'PhoneService']])
+col3, col4 = st.columns(2)
+col3.altair_chart(chart3, use_container_width=True)
+col4.altair_chart(chart4, use_container_width=True)
+
+st.write("---")
+
+# --- Tables ---
+st.subheader("Top Churners Details")
+st.dataframe(top_churners)
+
+st.subheader("Filtered Data Preview")
+st.dataframe(df_filtered)
+
