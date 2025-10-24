@@ -24,29 +24,20 @@ model_choice = st.sidebar.selectbox(
     ["Logistic Regression", "SMOTE Logistic", "XGBoost"]
 )
 
+# Top N slider
+top_n = st.sidebar.slider("Top N Churners", min_value=5, max_value=50, value=20)
+
 # Multi-select with explicit "Select All"
 def multiselect_with_select_all(label, options):
     options_with_all = ["Select All"] + list(options)
     selected = st.sidebar.multiselect(label, options_with_all, default=["Select All"])
-    if "Select All" in selected or not selected:
-        return list(options)  # return all categories
+    if "Select All" in selected:
+        return list(options)  # all values
     return selected
 
-# Apply filters
 internet_filter = multiselect_with_select_all("Filter by Internet Service:", df['InternetService'].unique())
 payment_filter = multiselect_with_select_all("Filter by Payment Method:", df['PaymentMethod'].unique())
 phone_filter = multiselect_with_select_all("Filter by Phone Service:", df['PhoneService'].unique())
-
-df_filtered = df[
-    df['InternetService'].isin(internet_filter) &
-    df['PaymentMethod'].isin(payment_filter) &
-    df['PhoneService'].isin(phone_filter)
-]
-
-# Top N slider
-top_n = st.sidebar.slider("Top N Churners", min_value=5, max_value=50, value=20)
-top_churners = df_filtered[df_filtered[pred_col] == 1].sort_values(prob_col, ascending=False).head(top_n)
-
 
 # --- Map selected model to prediction columns ---
 if model_choice == "Logistic Regression":
@@ -62,12 +53,23 @@ else:
     st.error("Invalid model selected")
     st.stop()
 
+# --- Apply filters ---
+df_filtered = df[
+    df['InternetService'].isin(internet_filter) &
+    df['PaymentMethod'].isin(payment_filter) &
+    df['PhoneService'].isin(phone_filter)
+]
+
+if df_filtered.empty:
+    st.warning("No data matches the current filter selection!")
+    st.stop()
+
 # --- Metrics ---
 accuracy = (df_filtered['Actual'] == df_filtered[pred_col]).mean()
 recall = recall_score(df_filtered['Actual'], df_filtered[pred_col])
 roc_auc = roc_auc_score(df_filtered['Actual'], df_filtered[prob_col])
 
-# Display metrics in 3 columns (card-like)
+# Display metrics in 3 columns
 col1, col2, col3 = st.columns(3)
 col1.metric("Accuracy", f"{accuracy:.2f}")
 col2.metric("Recall (Churn)", f"{recall:.2f}")
@@ -78,14 +80,15 @@ st.write("---")
 # --- Top Churners ---
 top_churners = df_filtered[df_filtered[pred_col] == 1].sort_values(prob_col, ascending=False).head(top_n)
 
-# Total charges by top churners
+# --- Charts ---
+# Total charges by top churners (bar)
 chart1 = alt.Chart(top_churners).mark_bar(color="#FF6F61").encode(
     x=alt.X("customerID:N", title="Customer ID"),
     y=alt.Y("TotalCharges:Q", title="Total Charges"),
-    tooltip=["customerID", "TotalCharges", prob_col]
+    tooltip=["customerID", "TotalCharges"]
 ).properties(title="Total Charges by Top Churners")
 
-# Percentage of top churners with phone service (donut chart)
+# Percentage of top churners with phone service (pie)
 phone_counts = top_churners['PhoneService'].value_counts(normalize=True).reset_index()
 phone_counts.columns = ['PhoneService', 'Percentage']
 chart2 = alt.Chart(phone_counts).mark_arc(innerRadius=50).encode(
@@ -94,7 +97,7 @@ chart2 = alt.Chart(phone_counts).mark_arc(innerRadius=50).encode(
     tooltip=["PhoneService", alt.Tooltip("Percentage:Q", format=".0%")]
 ).properties(title="Top Churners by Phone Service")
 
-# Top churners by payment method
+# Top churners by payment method (bar)
 payment_counts = top_churners['PaymentMethod'].value_counts().reset_index()
 payment_counts.columns = ['PaymentMethod', 'Count']
 chart3 = alt.Chart(payment_counts).mark_bar(color="#6A5ACD").encode(
@@ -103,7 +106,7 @@ chart3 = alt.Chart(payment_counts).mark_bar(color="#6A5ACD").encode(
     tooltip=["PaymentMethod", "Count"]
 ).properties(title="Top Churners by Payment Method")
 
-# Top churners by internet service
+# Top churners by internet service (bar)
 internet_counts = top_churners['InternetService'].value_counts().reset_index()
 internet_counts.columns = ['InternetService', 'Count']
 chart4 = alt.Chart(internet_counts).mark_bar(color="#20B2AA").encode(
@@ -124,9 +127,8 @@ col4.altair_chart(chart4, use_container_width=True)
 st.write("---")
 
 # --- Tables ---
-st.subheader(f"Top {top_n} Churners Details")
+st.subheader("Top Churners Details")
 st.dataframe(top_churners)
 
 st.subheader("Filtered Data Preview")
 st.dataframe(df_filtered)
-
