@@ -32,8 +32,9 @@ def multiselect_with_select_all(label, options):
     options_with_all = ["Select All"] + list(options)
     selected = st.sidebar.multiselect(label, options_with_all, default=["Select All"])
     if "Select All" in selected:
-        return list(options)  # all values
-    return selected
+        return list(options) # all values
+    else:
+        return selected
 
 internet_filter = multiselect_with_select_all("Filter by Internet Service:", df['InternetService'].unique())
 payment_filter = multiselect_with_select_all("Filter by Payment Method:", df['PaymentMethod'].unique())
