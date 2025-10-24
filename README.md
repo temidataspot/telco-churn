@@ -1,6 +1,10 @@
 # Telco Customer Churn Dashboard
-[![WebApp](https://img.shields.io/badge/Web%20App-Streamlit-pink)](https://churndata.streamlit.app/)
+
 A comprehensive customer churn prediction and analysis dashboard for a Telco company. This project implements multiple machine learning models to predict customer churn, compares their performance, and provides an interactive dashboard for exploring high-risk customers. The system helps businesses retain customers, optimise marketing strategies, and prioritise interventions.
+
+Access Dashboard
+
+[![WebApp](https://img.shields.io/badge/Web%20App-Streamlit-pink)](https://churndata.streamlit.app/)
 
 ---
 
