@@ -13,6 +13,29 @@ st.set_page_config(
 st.title("Telco Customer Churn Dashboard")
 st.markdown("Compare predictions from different models and explore top churners.")
 
+# --- Load Data ---
+@st.cache_data
+def load_data():
+    df = pd.read_csv("churn_model_comparison.csv")
+    return df
+
+df = load_data()
+
+# --- Sidebar: Model Selector ---
+model_choice = st.sidebar.selectbox(
+    "Select Model View:",
+    ["Logistic Regression", "SMOTE Logistic", "XGBoost"]
+)
+
+# Map choice to column names
+model_pred_col = {
+    "Logistic Regression": ("Logistic_Pred", "Logistic_Prob"),
+    "SMOTE Logistic": ("Smote_Pred", "Smote_Prob"),
+    "XGBoost": ("XGB_Pred", "XGB_Prob")
+}
+
+pred_col, prob_col = model_pred_col[model_choice]
+
 # --- Metrics ---
 accuracy = df[df[pred_col].notna()].apply(
     lambda row: 1 if row['Actual'] == row[pred_col] else 0, axis=1
@@ -52,27 +75,3 @@ with col2:
 
 st.markdown("---")
 st.write("Use the sidebar to select different model views and number of top churners.")
-
-st.markdown("---")
-# --- Load Data ---
-@st.cache_data
-def load_data():
-    df = pd.read_csv("churn_model_comparison.csv")
-    return df
-
-df = load_data()
-
-# --- Sidebar: Model Selector ---
-model_choice = st.sidebar.selectbox(
-    "Select Model View:",
-    ["Logistic Regression", "SMOTE Logistic", "XGBoost"]
-)
-
-# Map choice to column names
-model_pred_col = {
-    "Logistic Regression": ("Logistic_Pred", "Logistic_Prob"),
-    "SMOTE Logistic": ("Smote_Pred", "Smote_Prob"),
-    "XGBoost": ("XGB_Pred", "XGB_Prob")
-}
-
-pred_col, prob_col = model_pred_col[model_choice]
