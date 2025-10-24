@@ -25,7 +25,7 @@ model_choice = st.sidebar.selectbox(
 )
 
 # Top N slider
-top_n = st.sidebar.slider("Top N Churners", min_value=5, max_value=50, value=20)
+top_n = st.sidebar.slider("Top N Churners", min_value=5, max_value=100, value=10)
 
 # Multi-select with explicit "Select All"
 def multiselect_with_select_all(label, options):
