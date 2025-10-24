@@ -23,37 +23,33 @@ def load_data():
 df = load_data()
 
 # --- Sidebar Filters ---
-# --- Sidebar Filters ---
 st.sidebar.header("Filters")
 
-# Model selection
 model_choice = st.sidebar.selectbox(
     "Select Model View:",
     ["Logistic Regression", "SMOTE Logistic", "XGBoost"]
 )
 
-# Utility to add "Select All" at the top
-def multiselect_with_all(label, options):
-    default = options  # all selected by default
-    selected = st.sidebar.multiselect(label, options=options, default=default)
-    if not selected:
-        selected = options  # fallback to all if user deselects everything
-    return selected
+# Function to create multiselect with explicit "Select All"
+def multiselect_with_select_all(label, options):
+    options_with_all = ["Select All"] + list(options)
+    selected = st.sidebar.multiselect(label, options_with_all, default=["Select All"])
+    
+    if "Select All" in selected:
+        return options  # return all actual values
+    else:
+        return selected
 
-# Multi-select filters with select all by default
-internet_filter = multiselect_with_all(
-    "Filter by Internet Service:",
-    df['InternetService'].unique()
+internet_filter = multiselect_with_select_all(
+    "Filter by Internet Service:", df['InternetService'].unique()
 )
 
-payment_filter = multiselect_with_all(
-    "Filter by Payment Method:",
-    df['PaymentMethod'].unique()
+payment_filter = multiselect_with_select_all(
+    "Filter by Payment Method:", df['PaymentMethod'].unique()
 )
 
-phone_filter = multiselect_with_all(
-    "Filter by Phone Service:",
-    df['PhoneService'].unique()
+phone_filter = multiselect_with_select_all(
+    "Filter by Phone Service:", df['PhoneService'].unique()
 )
 
 # Apply filters
@@ -63,14 +59,6 @@ df_filtered = df[
     (df['PhoneService'].isin(phone_filter))
 ]
 
-# --- Map choice to column names ---
-model_pred_col = {
-    "Logistic Regression": ("Logistic_Pred", "Logistic_Prob"),
-    "SMOTE Logistic": ("Smote_Pred", "Smote_Prob"),
-    "XGBoost": ("XGB_Pred", "XGB_Prob")
-}
-
-pred_col, prob_col = model_pred_col[model_choice]
 
 # --- Metrics ---
 accuracy = (df_filtered['Actual'] == df_filtered[pred_col]).mean()
