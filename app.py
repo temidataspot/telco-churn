@@ -11,8 +11,8 @@ st.set_page_config(
 )
 
 # --- Centered Title & Subtitle ---
-st.markdown("<h1 style='text-align: center; color: #4B0082;'>Telco Customer Churn Dashboard</h1>", unsafe_allow_html=True)
-st.markdown("<h4 style='text-align: center; color: gray;'>Compare predictions from different models and explore top churners.</h4>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; color: white;'>Telco Customer Churn Dashboard</h1>", unsafe_allow_html=True)
+st.markdown("<h6 style='text-align: center; color: gray;'>Compare predictions from different models and explore top churners.</h4>", unsafe_allow_html=True)
 
 # --- Load Data ---
 @st.cache_data
