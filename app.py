@@ -12,7 +12,7 @@ st.set_page_config(
 
 # --- Centered Title & Subtitle ---
 st.markdown("<h1 style='text-align: center; color: white;'>Telco Customer Churn Dashboard</h1>", unsafe_allow_html=True)
-st.markdown("<h6 style='text-align: center; color: gray;'>Compare predictions from different models and explore top churners.</h4>", unsafe_allow_html=True)
+st.markdown("<h5 style='text-align: center; color: gray;'>Compare predictions from different models and explore top churners.</h4>", unsafe_allow_html=True)
 
 # --- Load Data ---
 @st.cache_data
@@ -23,28 +23,37 @@ def load_data():
 df = load_data()
 
 # --- Sidebar Filters ---
+# --- Sidebar Filters ---
 st.sidebar.header("Filters")
+
+# Model selection
 model_choice = st.sidebar.selectbox(
     "Select Model View:",
     ["Logistic Regression", "SMOTE Logistic", "XGBoost"]
 )
 
-internet_filter = st.sidebar.multiselect(
+# Utility to add "Select All" at the top
+def multiselect_with_all(label, options):
+    default = options  # all selected by default
+    selected = st.sidebar.multiselect(label, options=options, default=default)
+    if not selected:
+        selected = options  # fallback to all if user deselects everything
+    return selected
+
+# Multi-select filters with select all by default
+internet_filter = multiselect_with_all(
     "Filter by Internet Service:",
-    options=df['InternetService'].unique(),
-    default=df['InternetService'].unique()
+    df['InternetService'].unique()
 )
 
-payment_filter = st.sidebar.multiselect(
+payment_filter = multiselect_with_all(
     "Filter by Payment Method:",
-    options=df['PaymentMethod'].unique(),
-    default=df['PaymentMethod'].unique()
+    df['PaymentMethod'].unique()
 )
 
-phone_filter = st.sidebar.multiselect(
+phone_filter = multiselect_with_all(
     "Filter by Phone Service:",
-    options=df['PhoneService'].unique(),
-    default=df['PhoneService'].unique()
+    df['PhoneService'].unique()
 )
 
 # Apply filters
