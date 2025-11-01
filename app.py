@@ -13,7 +13,7 @@ st.set_page_config(page_title="Telco Customer Churn Dashboard", layout="wide")
 # --- Title and Subtitle ---
 st.markdown("<h1 style='text-align: center;'>Telco Customer Churn Dashboard</h1>", unsafe_allow_html=True)
 st.markdown("<h4 style='text-align: center;'>Compare predictions from different models and explore top churners</h4>", unsafe_allow_html=True)
-st.markdown("<p class='sub-header'>Built by Temi Priscilla Jokotola</p>", unsafe_allow_html=True)
+st.markdown("<h6 style='text-align: center;'>Built by Temi Priscilla Jokotola</h6>", unsafe_allow_html=True)
 st.write("---")
 
 # --- Sidebar Filters ---
