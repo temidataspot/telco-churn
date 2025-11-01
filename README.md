@@ -32,7 +32,7 @@ This project leverages machine learning and interactive data visualisation to:
 
 ---
 
-## 🛠 Tools & Technologies
+## Tools & Technologies
 
 | Tool | Purpose | 
 |------|---------|
